@@ -38,7 +38,7 @@ void MCU_Temperature_Safety_Check(void);
  */
 void Balance_Battery()
 {
-	if ( (battery_state.balance_port_connected == CONNECTED) && (Get_Error_State() == 0) ) {
+	if ( ENABLE_BALANCING && (battery_state.balance_port_connected == CONNECTED) && (Get_Error_State() == 0) ) {
 
 		uint32_t min_cell_voltage = Get_Cell_Voltage(0);
 		uint32_t max_cell_voltage = Get_Cell_Voltage(0);
@@ -207,16 +207,28 @@ void Battery_Connection_State()
 		battery_state.xt60_connected = NOT_CONNECTED;
 	}
 
+
+
+#if ENABLE_BALANCING
 	Balance_Connection_State();
+#else
+	battery_state.balance_port_connected = CONNECTED;
+	battery_state.number_of_cells = NUM_SERIES;
+  Clear_Error_State(CELL_CONNECTION_ERROR);
+#endif
 
 	MCU_Temperature_Safety_Check();
 
+#if ENABLE_BALANCING
 	Cell_Voltage_Safety_Check();
+#endif
 
+#if ENABLE_BALANCING
 	//Only update the balancing state if charging is off
 	if (Get_Regulator_Charging_State() == 0) {
 		Balance_Battery();
 	}
+#endif
 
 	if ((battery_state.xt60_connected == CONNECTED) && (battery_state.balance_port_connected == CONNECTED)){
 		if (Get_Battery_Voltage() < (battery_state.number_of_cells * CELL_VOLTAGE_TO_ENABLE_CHARGING)) {

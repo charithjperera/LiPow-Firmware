@@ -785,7 +785,7 @@ void vLED_Blinky(void const *pvParameters) {
 				HAL_GPIO_WritePin(Blue_LED_GPIO_Port, Blue_LED_Pin, GPIO_PIN_SET);
 			}
 
-			if (Get_Requires_Charging_State() == 1) {
+			if ((Get_Requires_Charging_State() == 1) || Get_Regulator_Charging_State() == 1) {
 				HAL_GPIO_WritePin(Red_LED_GPIO_Port, Red_LED_Pin, GPIO_PIN_RESET);
 			}
 			else {

@@ -283,9 +283,24 @@ void vRead_ADC(void const *pvParameters) {
 			/* A notification was received. */
 			Set_Battery_Voltage(adc_filtered_output[0]);
 
+#if ENABLE_BALANCING
 			for (int i = 0; i < 4; i++) {
-				Set_Cell_Voltage(i, adc_filtered_output[i+1]);
-			}
+          Set_Cell_Voltage(i, adc_filtered_output[i+1]);
+      }
+//#else
+//			for (int i = 0; i < NUM_SERIES; i++) {
+//          Set_Cell_Voltage(i, adc_filtered_output[i+1]);
+//      }
+//
+//			for (int i = NUM_SERIES; i < 4 ; i++) {
+//			  Set_Cell_Voltage(i, adc_filtered_output[i+1]);
+//      }
+//  battery_state.balance_port_connected = CONNECTED;
+//  battery_state.number_of_cells = NUM_SERIES;
+//  Clear_Error_State(CELL_CONNECTION_ERROR);
+#endif
+
+
 
 			Set_MCU_Temperature(adc_filtered_output[5]);
 
