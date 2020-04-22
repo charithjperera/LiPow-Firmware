@@ -138,8 +138,8 @@ void Error_Handler(void);
 #define LIPOW_MAJOR_VERSION	(uint8_t)1
 #define LIPOW_MINOR_VERSION	(uint8_t)3
 
-#define ENABLE_BALANCING  0
-#define NUM_SERIES              3
+#define ENABLE_BALANCING        0
+#define NUM_SERIES              4
 
 /* USER CODE END Private defines */
 

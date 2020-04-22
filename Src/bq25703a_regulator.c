@@ -378,6 +378,16 @@ void Set_Charge_Voltage(uint8_t number_of_cells) {
 
 	uint8_t	minimum_system_voltage_value = MIN_VOLT_ADD_1024_MV;
 
+#if FIXED_VOLTAGE_CHARGING
+	uint16_t target_charge_voltage = FIXED_VOLTAGE_SETPOINT;
+	uint16_t fastcharge_threshold = FIXED_VOLTAGE_PRECHARGE;
+
+
+	max_charge_register_1_value = (target_charge_voltage & 0xFF00) >> 8;
+  max_charge_register_2_value = (target_charge_voltage & 0x00FF);
+  minimum_system_voltage_value = (fastcharge_threshold & 0xFF00) >> 8;
+
+#else
 	if ((number_of_cells > 0) || (number_of_cells < 5)) {
 		switch (number_of_cells) {
 			case 1:
@@ -407,6 +417,7 @@ void Set_Charge_Voltage(uint8_t number_of_cells) {
 				break;
 			}
 	}
+#endif
 
 	I2C_Write_Register(MINIMUM_SYSTEM_VOLTAGE_ADDR, (uint8_t *) &minimum_system_voltage_value);
 
@@ -436,7 +447,7 @@ uint32_t Calculate_Max_Charge_Power() {
 	if (Get_MCU_Temperature() > TEMP_THROTTLE_THRESH_C){
 		float temperature = (float)Get_MCU_Temperature();
 
-		float power_scalar = 1.0f - ((float)(0.0333 * temperature) - 1.33f);
+		float power_scalar = 1.0f - ((float)(0.0333 * temperature) - 1.66f);
 
 		if (power_scalar > 1.0f) {
 			power_scalar = 1.0f;
@@ -450,6 +461,7 @@ uint32_t Calculate_Max_Charge_Power() {
 
 	return charging_power_mw;
 }
+
 
 /**
  * @brief Determines if charger output should be on and sets voltage and current parameters as needed
@@ -479,9 +491,6 @@ void Control_Charger_Output() {
 
 		uint32_t charging_current_ma = ((Calculate_Max_Charge_Power()) / (float)(Get_Battery_Voltage() / BATTERY_ADC_MULTIPLIER));
 
-		if (charging_current_ma > 4){
-		  charging_current_ma = MAX_CHARGE_CURRENT_MA;
-		}
 		Set_Charge_Current(charging_current_ma);
 
 		Regulator_HI_Z(0);
@@ -493,8 +502,9 @@ void Control_Charger_Output() {
 			Regulator_HI_Z(0);
 		}
 
-		if ((Get_Requires_Charging_State() == 0) && (regulator.charge_current < CHARGE_TERM_CURRENT_MA)){
+		float charge_current_meas_ma = ((float)Get_Charge_Current_ADC_Reading()/REG_ADC_MULTIPLIER)*1000;
 
+		if ((Get_Requires_Charging_State() == 0) && (charge_current_meas_ma < CHARGE_TERM_CURRENT_MA)){
 		  termination_counter++;
 		  if(termination_counter > 3){
 		    Regulator_HI_Z(1);
@@ -529,6 +539,9 @@ void vRegulator(void const *pvParameters) {
 
 	TickType_t xDelay = 250 / portTICK_PERIOD_MS;
 
+	/* Precharge timeout at bootup for 250ms * precharge_timeout */
+	static uint16_t precharge_timeout = 240; //Up to 60 second UVP recovery precharge
+
 	/* Disable the output of the regulator for safety */
 	Regulator_HI_Z(1);
 
@@ -543,8 +556,6 @@ void vRegulator(void const *pvParameters) {
 
 	/* Setup the ADC on the Regulator */
 	Regulator_Set_ADC_Option();
-
-	uint8_t timer_count = 0;
 
 	for (;;) {
 
@@ -561,11 +572,43 @@ void vRegulator(void const *pvParameters) {
 			regulator.connected = 0;
 		}
 
-		Read_Charge_Status();
+    Read_Charge_Status();
 
-		Regulator_Read_ADC();
+    Regulator_Read_ADC();
+
+#if ATTEMPT_UVP_RECOVERY
+		/* Loop through here upon bootup to try recovering a UVP pack */
+		float regulator_vbat_voltage = ((float)Get_VBAT_ADC_Reading()/REG_ADC_MULTIPLIER);
+
+		// Precharge until we exceed 12.4V or we hit the timeout. Leave at least one in precharge_timeout as a flag to disable the regulator after this loop
+		while((precharge_timeout>1) && (regulator_vbat_voltage < (NUM_SERIES * 3.1)) ){
+
+		  Set_Charge_Voltage(NUM_SERIES);
+      Set_Charge_Current(UVP_RECOVERY_CURRENT_MA);
+
+      Regulator_HI_Z(0);
+
+		  vTaskDelay(xDelay);
+
+		  Regulator_Read_ADC();
+		  regulator_vbat_voltage = ((float)Get_VBAT_ADC_Reading()/REG_ADC_MULTIPLIER);
+		  precharge_timeout = precharge_timeout - 1;
+		}
+
+		if (precharge_timeout){
+		  precharge_timeout = 0;
+      Regulator_HI_Z(1);
+      Set_Charge_Voltage(0);
+      Set_Charge_Current(0);
+      vTaskDelay(xDelay);
+		}
+#endif
+
+
 
 #if ENABLE_BALANCING
+		uint8_t timer_count = 0;
+
 		timer_count++;
 		if (timer_count < 90) {
 			Control_Charger_Output();

@@ -89,14 +89,24 @@ extern "C" {
 
 #define IIN_ADC_SCALE				(uint32_t)(0.050 * REG_ADC_MULTIPLIER)
 
-#define MAX_CHARGE_CURRENT_MA		1000
+#define MAX_CHARGE_CURRENT_MA		3000
 #define CHARGE_TERM_CURRENT_MA  500
 #define ASSUME_EFFICIENCY			0.85f
 #define BATTERY_DISCONNECT_THRESH	(uint32_t)(4.215 * REG_ADC_MULTIPLIER)
 #define MAX_CHARGING_POWER			60000
 #define NON_USB_PD_CHARGE_POWER		2500
 
-#define TEMP_THROTTLE_THRESH_C		40
+#define TEMP_THROTTLE_THRESH_C		50
+
+#define FIXED_VOLTAGE_CHARGING    1
+#define FIXED_VOLTAGE_SETPOINT    15700
+#define FIXED_VOLTAGE_PRECHARGE   12400
+//Fixed voltage charging settings are configured in Set_Charge_Voltage function
+
+#define ATTEMPT_UVP_RECOVERY          1
+#define UVP_RECOVERY_CURRENT_MA       500
+
+
 
 uint8_t Get_Regulator_Connection_State(void);
 uint8_t Get_Regulator_Charging_State(void);
