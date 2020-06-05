@@ -140,6 +140,7 @@ void Error_Handler(void);
 
 #define ENABLE_BALANCING        0
 #define NUM_SERIES              4
+#define FACTORY_LEDS            1
 
 /* USER CODE END Private defines */
 

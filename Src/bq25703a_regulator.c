@@ -33,6 +33,7 @@ struct Regulator {
 
 /* Private variables ---------------------------------------------------------*/
 struct Regulator regulator;
+uint8_t precharging_state=0;
 
 /* The maximum time to wait for the mutex that guards the UART to become
  available. */
@@ -108,6 +109,14 @@ uint32_t Get_Charge_Current_ADC_Reading() {
  */
 uint32_t Get_Max_Charge_Current() {
 	return regulator.max_charge_current_ma;
+}
+
+/**
+ * @brief Returns whether we are in the precharge state or not
+ * @retval uint8_t 1 or 0
+ */
+uint8_t Get_Precharge_State() {
+  return precharging_state;
 }
 
 /**
@@ -508,6 +517,7 @@ void Control_Charger_Output() {
 		  termination_counter++;
 		  if(termination_counter > 3){
 		    Regulator_HI_Z(1);
+		    vTaskDelay(xDelay);
 		  }
 		}else{
 		  termination_counter = 0;
@@ -539,8 +549,9 @@ void vRegulator(void const *pvParameters) {
 
 	TickType_t xDelay = 250 / portTICK_PERIOD_MS;
 
-	/* Precharge timeout at bootup for 250ms * precharge_timeout */
-	static uint16_t precharge_timeout = 240; //Up to 60 second UVP recovery precharge
+	/* Precharge timeout at bootup for 3s * precharge_timeout */
+	static uint16_t precharge_timeout = 60; //Up to 180 second UVP recovery precharge
+	static uint8_t initial_precharge_wakeup = 1; //Apply a longer wakeup pulse to see if that's able to wake up the BQ
 
 	/* Disable the output of the regulator for safety */
 	Regulator_HI_Z(1);
@@ -556,6 +567,8 @@ void vRegulator(void const *pvParameters) {
 
 	/* Setup the ADC on the Regulator */
 	Regulator_Set_ADC_Option();
+
+	vTaskDelay(xDelay); //This was just added to test if init can be made smoother
 
 	for (;;) {
 
@@ -581,26 +594,39 @@ void vRegulator(void const *pvParameters) {
 		float regulator_vbat_voltage = ((float)Get_VBAT_ADC_Reading()/REG_ADC_MULTIPLIER);
 
 		// Precharge until we exceed 12.4V or we hit the timeout. Leave at least one in precharge_timeout as a flag to disable the regulator after this loop
-		while((precharge_timeout>1) && (regulator_vbat_voltage < (NUM_SERIES * 3.1)) ){
-
+		while((precharge_timeout>1) && (regulator_vbat_voltage < (NUM_SERIES * 3.1))){
+		  precharging_state = 1;
 		  Set_Charge_Voltage(NUM_SERIES);
       Set_Charge_Current(UVP_RECOVERY_CURRENT_MA);
-
       Regulator_HI_Z(0);
+      if(initial_precharge_wakeup){
+        initial_precharge_wakeup = 0;
+        vTaskDelay(40*xDelay);
+      }else{
+        vTaskDelay(12*xDelay);
+      }
 
-		  vTaskDelay(xDelay);
 
 		  Regulator_Read_ADC();
 		  regulator_vbat_voltage = ((float)Get_VBAT_ADC_Reading()/REG_ADC_MULTIPLIER);
 		  precharge_timeout = precharge_timeout - 1;
 		}
 
-		if (precharge_timeout){
+		if(precharge_timeout){
+		  precharging_state = 0;
 		  precharge_timeout = 0;
       Regulator_HI_Z(1);
-      Set_Charge_Voltage(0);
-      Set_Charge_Current(0);
-      vTaskDelay(xDelay);
+
+      vTaskDelay(4*xDelay);
+      Read_Charge_Status();
+      Regulator_Read_ADC();
+		}
+#endif
+
+#if CONTINUOUS_UVP_RECOVERY
+		uint16_t zero_volt_tracker = 0;
+		if (regulator_vbat_voltage < (NUM_SERIES * 3.1)){
+		  zero_volt_tracker++;
 		}
 #endif
 

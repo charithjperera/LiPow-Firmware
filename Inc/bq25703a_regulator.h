@@ -89,7 +89,7 @@ extern "C" {
 
 #define IIN_ADC_SCALE				(uint32_t)(0.050 * REG_ADC_MULTIPLIER)
 
-#define MAX_CHARGE_CURRENT_MA		3000
+#define MAX_CHARGE_CURRENT_MA		2500
 #define CHARGE_TERM_CURRENT_MA  500
 #define ASSUME_EFFICIENCY			0.85f
 #define BATTERY_DISCONNECT_THRESH	(uint32_t)(4.215 * REG_ADC_MULTIPLIER)
@@ -99,7 +99,7 @@ extern "C" {
 #define TEMP_THROTTLE_THRESH_C		50
 
 #define FIXED_VOLTAGE_CHARGING    1
-#define FIXED_VOLTAGE_SETPOINT    15700
+#define FIXED_VOLTAGE_SETPOINT    15680
 #define FIXED_VOLTAGE_PRECHARGE   12400
 //Fixed voltage charging settings are configured in Set_Charge_Voltage function
 
@@ -116,6 +116,7 @@ uint32_t Get_PSYS_ADC_Reading(void);
 uint32_t Get_Input_Current_ADC_Reading(void);
 uint32_t Get_Charge_Current_ADC_Reading(void);
 uint32_t Get_Max_Charge_Current(void);
+uint8_t Get_Precharge_State();
 void vRegulator(void const *pvParameters);
 
 /* Used to guard access to the I2C in case messages are sent to the UART from

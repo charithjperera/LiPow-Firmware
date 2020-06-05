@@ -764,6 +764,17 @@ void vLED_Blinky(void const *pvParameters) {
 				count++;
 			}
 		}
+		else if(Get_Precharge_State()){
+		  HAL_GPIO_WritePin(Green_LED_GPIO_Port, Green_LED_Pin, GPIO_PIN_SET);
+      HAL_GPIO_WritePin(Blue_LED_GPIO_Port, Blue_LED_Pin, GPIO_PIN_SET);
+		  if(count){
+		    HAL_GPIO_WritePin(Red_LED_GPIO_Port, Red_LED_Pin, GPIO_PIN_RESET);
+		    count = 0;
+		  }else{
+		    HAL_GPIO_WritePin(Red_LED_GPIO_Port, Red_LED_Pin, GPIO_PIN_SET);
+		    count++;
+		  }
+		}
 		else if (Get_Error_State() != 0) {
 			HAL_GPIO_WritePin(Red_LED_GPIO_Port, Red_LED_Pin, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(Green_LED_GPIO_Port, Green_LED_Pin, GPIO_PIN_SET);
@@ -791,13 +802,22 @@ void vLED_Blinky(void const *pvParameters) {
 			else {
 				HAL_GPIO_WritePin(Red_LED_GPIO_Port, Red_LED_Pin, GPIO_PIN_SET);
 			}
-
-			if ((Get_Requires_Charging_State() == 0) && (Get_Balancing_State() == 0)) {
+// Factory LED state will only go green when charging is completed
+#if FACTORY_LEDS
+			if ((Get_Requires_Charging_State() == 0) && (Get_Regulator_Charging_State() == 0)) {
 				HAL_GPIO_WritePin(Green_LED_GPIO_Port, Green_LED_Pin, GPIO_PIN_RESET);
 			}
 			else {
 				HAL_GPIO_WritePin(Green_LED_GPIO_Port, Green_LED_Pin, GPIO_PIN_SET);
 			}
+#else
+			if ((Get_Requires_Charging_State() == 0)) {
+        HAL_GPIO_WritePin(Green_LED_GPIO_Port, Green_LED_Pin, GPIO_PIN_RESET);
+      }
+      else {
+        HAL_GPIO_WritePin(Green_LED_GPIO_Port, Green_LED_Pin, GPIO_PIN_SET);
+      }
+#endif
 		}
 
 		vTaskDelay(xDelay);
