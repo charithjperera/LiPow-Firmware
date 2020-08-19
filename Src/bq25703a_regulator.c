@@ -308,9 +308,11 @@ void Regulator_Read_ADC() {
 void Regulator_HI_Z(uint8_t hi_z_en) {
 	if (hi_z_en == 1) {
 		HAL_GPIO_WritePin(ILIM_HIZ_GPIO_Port, ILIM_HIZ_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOA, FAN_ENn_Pin, GPIO_PIN_SET); // Evil hack to turn the fan off along with the regulator
 	}
 	else {
 		HAL_GPIO_WritePin(ILIM_HIZ_GPIO_Port, ILIM_HIZ_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOA, FAN_ENn_Pin, GPIO_PIN_RESET); // Evil hack to turn the fan on along with the regulator
 	}
 }
 
@@ -524,17 +526,21 @@ void Control_Charger_Output() {
 		}
 	}
 	// Case to handle non USB PD supplies. Limited to 5V 500mA.
-	else if ((Get_XT60_Connection_State() == CONNECTED) && (balance_connection_state == CONNECTED) && (Get_Error_State() == 0) && (Get_Input_Power_Ready() == NO_USB_PD_SUPPLY) && (Get_Cell_Over_Voltage_State() == 0)) {
-
-		Set_Charge_Voltage(Get_Number_Of_Cells());
-
-		uint32_t charging_current_ma = ((NON_USB_PD_CHARGE_POWER * ASSUME_EFFICIENCY) / (Get_Battery_Voltage() / BATTERY_ADC_MULTIPLIER));
-
-		Set_Charge_Current(charging_current_ma);
-
-		Regulator_HI_Z(0);
-
-	}
+//	else if ((Get_XT60_Connection_State() == CONNECTED) && (balance_connection_state == CONNECTED) && (Get_Error_State() == 0) && (Get_Input_Power_Ready() == NO_USB_PD_SUPPLY) && (Get_Cell_Over_Voltage_State() == 0)) {
+//
+//#if ENABLE_BALANCING
+//    Set_Charge_Voltage(Get_Number_Of_Cells());
+//#else
+//    Set_Charge_Voltage(NUM_SERIES);
+//#endif
+//
+//		uint32_t charging_current_ma = ((NON_USB_PD_CHARGE_POWER * ASSUME_EFFICIENCY) / (Get_Battery_Voltage() / BATTERY_ADC_MULTIPLIER));
+//
+//		Set_Charge_Current(charging_current_ma);
+//
+//		Regulator_HI_Z(0);
+//
+//	}
 	else {
 		Regulator_HI_Z(1);
 		Set_Charge_Voltage(0);
@@ -596,18 +602,29 @@ void vRegulator(void const *pvParameters) {
 		// Precharge until we exceed 12.4V or we hit the timeout. Leave at least one in precharge_timeout as a flag to disable the regulator after this loop
 		while((precharge_timeout>1) && (regulator_vbat_voltage < (NUM_SERIES * 3.1))){
 		  precharging_state = 1;
-		  Set_Charge_Voltage(NUM_SERIES);
-      Set_Charge_Current(UVP_RECOVERY_CURRENT_MA);
-      Regulator_HI_Z(0);
+
+      uint8_t ticks = 0;
       if(initial_precharge_wakeup){
         initial_precharge_wakeup = 0;
-        vTaskDelay(40*xDelay);
+        ticks = 20;
       }else{
-        vTaskDelay(12*xDelay);
+        ticks = 12;
       }
 
+      while(ticks){
+        Set_Charge_Voltage(NUM_SERIES);
+        Set_Charge_Current(UVP_RECOVERY_CURRENT_MA);
+        Regulator_HI_Z(0);
+        Read_Charge_Status();
+        Regulator_Read_ADC();
 
-		  Regulator_Read_ADC();
+        vTaskDelay(xDelay);
+        ticks--;
+      }
+
+      //Regulator_Read_ADC(); //TBD
+      //Read_Charge_Status(); // TBD
+
 		  regulator_vbat_voltage = ((float)Get_VBAT_ADC_Reading()/REG_ADC_MULTIPLIER);
 		  precharge_timeout = precharge_timeout - 1;
 		}
@@ -617,9 +634,17 @@ void vRegulator(void const *pvParameters) {
 		  precharge_timeout = 0;
       Regulator_HI_Z(1);
 
-      vTaskDelay(4*xDelay);
-      Read_Charge_Status();
-      Regulator_Read_ADC();
+      uint8_t ticks = 4;
+
+      while(ticks){
+        vTaskDelay(xDelay);
+        Read_Charge_Status();
+        Regulator_Read_ADC();
+        ticks--;
+      }
+      //Read_Charge_Status(); // TBD
+      //Regulator_Read_ADC(); // TBD
+
 		}
 #endif
 

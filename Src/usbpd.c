@@ -62,8 +62,10 @@ volatile uint8_t power_ready = NOT_READY;
 volatile uint8_t match_found = 0;
 
 volatile uint16_t voltage_choice_list_mv[3][VOLTAGE_CHOICE_ARRAY_SIZE] = {
-		{9000, 12000, 15000, 5000, 20000}, //Two S voltage choice list
-		{12000, 15000, 20000, 9000, 5000}, //Three S voltage choice list
+//		{9000, 12000, 15000, 5000, 20000}, //Two S voltage choice list
+//		{12000, 15000, 20000, 9000, 5000}, //Three S voltage choice list
+		{20000, 15000, 12000, 9000, 5000}, //Two S voltage choice list
+		{20000, 15000, 12000, 9000, 5000}, //Three S voltage choice list
 		{20000, 15000, 12000, 9000, 5000}  //Four S voltage choice list
 };
 
@@ -217,7 +219,7 @@ void vUSBPD_User(void const *pvParameters) {
 	for (;;) {
 
 		//Find the best PDO from the source for the highest regulator efficiency
-		if ((Get_Balance_Connection_State() == CONNECTED)) {
+		if ((Get_XT60_Connection_State() == CONNECTED)) { // Changing from balance connection to XT60 connection
 			if (match_found == 0) {
 				for (int i = 0; i < VOLTAGE_CHOICE_ARRAY_SIZE; i++) {
 					for (int t = 0; t < DPM_Ports[USBPD_PORT_0].DPM_NumberOfRcvSRCPDO; t++) {
@@ -238,7 +240,7 @@ void vUSBPD_User(void const *pvParameters) {
 			match_found = 0;
 		}
 
-		if ((Get_XT60_Connection_State() == CONNECTED) && (Get_Balance_Connection_State() == CONNECTED) && (power_ready == NOT_READY) && (match_found == 1)) {
+		if ((Get_XT60_Connection_State() == CONNECTED) && (Get_Balance_Connection_State() == CONNECTED) && (power_ready == NOT_READY) && (match_found == 1) && (Get_Requires_Charging_State() == 1)) {
 			printf("Requesting %dV, Result: ", (source_pdo[selected_source_pdo].voltage_mv/1000));
 			status = USBPD_DPM_RequestMessageRequest(USBPD_PORT_0, (selected_source_pdo + 1), (uint16_t)source_pdo[selected_source_pdo].voltage_mv);
 			vTaskDelay(400 / portTICK_PERIOD_MS);
@@ -260,7 +262,8 @@ void vUSBPD_User(void const *pvParameters) {
 		else if ((Get_XT60_Connection_State() == NOT_CONNECTED) || (Get_Balance_Connection_State() == NOT_CONNECTED)){
 			if (Get_VBUS_ADC_Reading() > (6 * REG_ADC_MULTIPLIER)) {
 				printf("Requesting 5V, Result: ");
-				status = USBPD_DPM_RequestMessageRequest(USBPD_PORT_0, 1, (uint16_t)5000);
+				selected_source_pdo = 0;
+				status = USBPD_DPM_RequestMessageRequest(USBPD_PORT_0, selected_source_pdo + 1, (uint16_t)source_pdo[selected_source_pdo].voltage_mv);
 				vTaskDelay(100 / portTICK_PERIOD_MS);
 				if (status == USBPD_OK) {
 					printf("Success\r\n");

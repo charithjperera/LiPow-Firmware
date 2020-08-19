@@ -86,7 +86,6 @@ extern DMA_HandleTypeDef hdma_usart1_tx;
 extern DMA_HandleTypeDef hdma_usart1_rx;
 extern UART_HandleTypeDef huart1;
 extern TIM_HandleTypeDef htim1;
-extern TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN EV */
 
@@ -169,16 +168,8 @@ void DMA1_Channel2_3_IRQHandler(void)
   /* USER CODE BEGIN DMA1_Channel2_3_IRQn 0 */
 
   /* USER CODE END DMA1_Channel2_3_IRQn 0 */
-#if defined(_CLI_INTERFACE)
   HAL_DMA_IRQHandler(&hdma_usart1_tx);
   HAL_DMA_IRQHandler(&hdma_usart1_rx);
-#endif /* _CLI_INTERFACE */
-
-#if defined(_GUI_INTERFACE)
-  if (TRACER_EMB_DMA_MODE == 1) {
-	  TRACER_EMB_IRQHandlerDMA();
-  }
-#endif /* _GUI_INTERFACE */
   /* USER CODE BEGIN DMA1_Channel2_3_IRQn 1 */
 
   /* USER CODE END DMA1_Channel2_3_IRQn 1 */
@@ -228,20 +219,6 @@ void TIM1_BRK_UP_TRG_COM_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles TIM2 global interrupt.
-  */
-void TIM2_IRQHandler(void)
-{
-  /* USER CODE BEGIN TIM2_IRQn 0 */
-
-  /* USER CODE END TIM2_IRQn 0 */
-  //HAL_TIM_IRQHandler(&htim2);
-  /* USER CODE BEGIN TIM2_IRQn 1 */
-
-  /* USER CODE END TIM2_IRQn 1 */
-}
-
-/**
   * @brief This function handles TIM7 and LPTIM2 interrupts (LPTIM2 interrupt through EXTI line 30).
   */
 void TIM7_LPTIM2_IRQHandler(void)
@@ -284,13 +261,7 @@ void USART1_IRQHandler(void)
   /* USER CODE BEGIN USART1_IRQn 0 */
 
   /* USER CODE END USART1_IRQn 0 */
-#if defined(_CLI_INTERFACE)
   HAL_UART_IRQHandler(&huart1);
-#endif /* _CLI_INTERFACE */
-
-#if defined(_GUI_INTERFACE)
-  TRACER_EMB_IRQHandlerUSART();
-#endif /* _GUI_INTERFACE */
   /* USER CODE BEGIN USART1_IRQn 1 */
 
   /* USER CODE END USART1_IRQn 1 */

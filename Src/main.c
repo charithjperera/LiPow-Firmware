@@ -164,6 +164,7 @@ int main(void)
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
+  
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -187,6 +188,7 @@ int main(void)
   MX_ADC1_Init();
   MX_I2C1_Init();
   MX_TIM7_Init();
+  MX_USART1_UART_Init();
   MX_UCPD2_Init();
   /* USER CODE BEGIN 2 */
 
@@ -691,7 +693,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, Blue_LED_Pin|Green_LED_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOA, Blue_LED_Pin|Green_LED_Pin|FAN_ENn_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, EN_OTG_Pin|ILIM_HIZ_Pin|CELL_1S_DIS_EN_Pin|CELL_2S_DIS_EN_Pin 
@@ -700,8 +702,8 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(Red_LED_GPIO_Port, Red_LED_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pins : Blue_LED_Pin Green_LED_Pin */
-  GPIO_InitStruct.Pin = Blue_LED_Pin|Green_LED_Pin;
+  /*Configure GPIO pins : Blue_LED_Pin Green_LED_Pin FAN_ENn_Pin */
+  GPIO_InitStruct.Pin = Blue_LED_Pin|Green_LED_Pin|FAN_ENn_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -764,7 +766,7 @@ void vLED_Blinky(void const *pvParameters) {
 				count++;
 			}
 		}
-		else if(Get_Precharge_State()){
+		else if(Get_Precharge_State()){ // // Where we're precharging - blink red
 		  HAL_GPIO_WritePin(Green_LED_GPIO_Port, Green_LED_Pin, GPIO_PIN_SET);
       HAL_GPIO_WritePin(Blue_LED_GPIO_Port, Blue_LED_Pin, GPIO_PIN_SET);
 		  if(count){
@@ -774,6 +776,19 @@ void vLED_Blinky(void const *pvParameters) {
 		    HAL_GPIO_WritePin(Red_LED_GPIO_Port, Red_LED_Pin, GPIO_PIN_SET);
 		    count++;
 		  }
+		}
+		else if((Get_Input_Power_Ready()!=READY) && ((Get_Regulator_Charging_State() == 1) || (Get_Requires_Charging_State() == 1))){ // Where we're charging but without PD - blink blue and red
+		  HAL_GPIO_WritePin(Green_LED_GPIO_Port, Green_LED_Pin, GPIO_PIN_SET);
+
+      if(count){
+        HAL_GPIO_WritePin(Red_LED_GPIO_Port, Red_LED_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(Blue_LED_GPIO_Port, Blue_LED_Pin, GPIO_PIN_SET);
+        count = 0;
+      }else{
+        HAL_GPIO_WritePin(Red_LED_GPIO_Port, Red_LED_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(Blue_LED_GPIO_Port, Blue_LED_Pin, GPIO_PIN_RESET);
+        count++;
+      }
 		}
 		else if (Get_Error_State() != 0) {
 			HAL_GPIO_WritePin(Red_LED_GPIO_Port, Red_LED_Pin, GPIO_PIN_SET);
@@ -863,8 +878,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM1) {
     HAL_IncTick();
-    extern void USBPD_DPM_TimerCounter(void);
-    USBPD_DPM_TimerCounter();
   }
   /* USER CODE BEGIN Callback 1 */
 
