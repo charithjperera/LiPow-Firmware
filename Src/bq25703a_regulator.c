@@ -556,7 +556,7 @@ void vRegulator(void const *pvParameters) {
 	TickType_t xDelay = 250 / portTICK_PERIOD_MS;
 
 	/* Precharge timeout at bootup for 3s * precharge_timeout */
-	static uint16_t precharge_timeout = 60; //Up to 180 second UVP recovery precharge
+	static uint16_t precharge_timeout = 300; //Up to 3*300 second UVP recovery precharge
 	static uint8_t initial_precharge_wakeup = 1; //Apply a longer wakeup pulse to see if that's able to wake up the BQ
 
 	/* Disable the output of the regulator for safety */

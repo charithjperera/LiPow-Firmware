@@ -89,7 +89,7 @@ extern "C" {
 
 #define IIN_ADC_SCALE				(uint32_t)(0.050 * REG_ADC_MULTIPLIER)
 
-#define MAX_CHARGE_CURRENT_MA		3650 // 3800 / 3650 / 2500
+#define MAX_CHARGE_CURRENT_MA		3800 // 3800 / 3650 / 2500
 #define CHARGE_TERM_CURRENT_MA  500
 #define ASSUME_EFFICIENCY			0.85f
 #define BATTERY_DISCONNECT_THRESH	(uint32_t)(4.215 * REG_ADC_MULTIPLIER)
@@ -104,7 +104,7 @@ extern "C" {
 //Fixed voltage charging settings are configured in Set_Charge_Voltage function
 
 #define ATTEMPT_UVP_RECOVERY          1
-#define UVP_RECOVERY_CURRENT_MA       500
+#define UVP_RECOVERY_CURRENT_MA       200
 
 
 
